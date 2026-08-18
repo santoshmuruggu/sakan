@@ -30,7 +30,7 @@ import re
 
 import chromadb
 
-from index import CHROMA_DIR, COLLECTION_NAME, build_bm25_index, load_chunks, tokenize
+from index import CHROMA_DIR, COLLECTION_NAME, build_bm25_index, chunk_label, load_chunks, tokenize
 
 RRF_K = 60
 
@@ -99,12 +99,6 @@ class Retriever:
             if named_chunk and named_chunk not in results:
                 results = [named_chunk] + results[:k - 1]
         return results
-
-
-def chunk_label(chunk: dict) -> str:
-    if chunk["law"]:
-        return f"Law {chunk['law']}, Article {chunk['article_no']}"
-    return f"Tenancy Guide — {chunk['section']}"
 
 
 def main():

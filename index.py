@@ -35,9 +35,15 @@ def load_chunks() -> list[dict]:
 def chunk_label(chunk: dict) -> str:
     """A short human-readable label prepended to each chunk's text before
     embedding/indexing, so the embedding model and BM25 both 'see' which
-    article this is, not just bare legal prose with no context."""
-    if chunk["law"]:
-        return f"Law {chunk['law']}, Article {chunk['article_no']}"
+    article this is, not just bare legal prose with no context. Also used
+    as the citation format the LLM is told to use in generate.py, so this
+    is the ONE place that format is defined."""
+    law = chunk["law"]
+    if law:
+        # Decree entries already read as "Decree 43/2013" — don't turn
+        # that into the double-prefixed "Law Decree 43/2013".
+        prefix = law if law.startswith("Decree") else f"Law {law}"
+        return f"{prefix}, Article {chunk['article_no']}"
     return f"Tenancy Guide — {chunk['section']}"
 
 
