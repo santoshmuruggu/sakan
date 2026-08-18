@@ -173,35 +173,59 @@ don't have an AI-generated answer yet.
   chunks — confirmed this fixes the Day 2 finding: the registration question
   now returns the current amended Article 4, not the outdated one. Ran as a
   demo against 4 real questions and every top hit was the right article.
-- [ ] **Step 3.2 — Get an LLM API key working.** Using Anthropic (Claude).
-  Waiting on the key — will do a small end-to-end "hello world" call to
-  confirm it and billing are set up before wiring it into the real pipeline.
-- [x] **Step 3.3 — `generate.py`: the guarded prompt.** Written and wired up
-  (retrieve → format context → guarded system prompt → Claude Haiku), citing
-  each chunk's exact label (e.g. `(Law 26/2007, Article 9)` or
-  `(Decree 43/2013, Article 1)`) instead of the guide's plain `(Article N)`,
-  since our corpus has three different article-numbering sequences and a
-  bare number would be ambiguous. Also explicitly told not to follow
-  instructions that appear inside the user's question (prompt-injection
-  guard, matching eval question o08). Tested everything that doesn't need
-  the API key: prompt formatting looks right, and the no-chunks-retrieved
-  case correctly short-circuits straight to the refusal string without even
-  calling the LLM. **Blocked on Step 3.2** for the actual generation calls.
-- [ ] **Step 3.4 — Wire it together.** question → retrieve → generate →
-  printed answer, runnable from the command line. (Code is written in
-  `generate.py`'s `main()` — just needs the API key to actually run.)
-- [ ] **Step 3.5 — Manual smoke test.** Ask it 3–4 real questions and 1
-  deliberately out-of-scope question, and read the answers yourself.
+- [x] **Step 3.2 — Get an LLM API key working.** Anthropic key added to
+  `.env` (gitignored — verified it never shows up in `git status`). First
+  live call succeeded: correct, well-cited answer for a real question, and
+  a refusal for an out-of-scope one.
+- [x] **Step 3.3 — `generate.py`: the guarded prompt.** Retrieve → format
+  context → guarded system prompt → Claude Haiku, citing each chunk's exact
+  label (e.g. `(Law 26/2007, Article 9)` or `(Decree 43/2013, Article 1)`)
+  instead of the guide's plain `(Article N)`, since our corpus has three
+  different article-numbering sequences and a bare number would be
+  ambiguous. Also told not to follow instructions inside the user's
+  question (prompt-injection guard, matching eval question o08).
+- [x] **Step 3.4 — Wire it together.** Working end-to-end from the command
+  line: question → retrieve → generate → printed, cited answer.
+- [x] **Step 3.5 — Manual smoke test.** Ran 5 real questions spanning
+  factual, edge-case, and out-of-scope — all correct and well-cited. Found
+  and fixed a real retrieval bug along the way (see below), so this step
+  did real work, not just a rubber-stamp pass.
 
-> **Side quest while working through Day 3:** found more PDF text-extraction
-> artifacts by accident (stray spaces splitting words apart, e.g.
-> `terminat ion` → should be "termination", `damage s` → "damages") on top of
-> the ligature bug from Day 2. Went back and fixed these in `ingest.py` too,
-> then re-ran the whole `ingest.py` → `index.py` pipeline — this is exactly
-> why Step 2.3's "save processed chunks to JSON" makes re-running cheap.
+> **Bug found and fixed during the smoke test:** eval question e01 (the
+> Article 9 two-year trap) got a false "Not covered" refusal on the first
+> run. Turned out `hybrid_search` was fetching a fixed top-N from each
+> index and filtering out `is_current: false` chunks AFTER ranking — but
+> the outdated and current versions of an amended article share almost the
+> same label/topic, so they directly compete for the same top-N ranking
+> slots. Worse, a query about the OLD "two-year rule" is naturally MORE
+> similar (by both meaning and keywords) to the outdated text — since
+> that's literally what it's about — so it out-ranked the current Article 9
+> so badly the current version didn't even make the top 20. Fixed by
+> excluding outdated chunks from the search space entirely (via ChromaDB's
+> `where` filter and filtering the BM25 corpus up front) instead of
+> filtering after the fact. Even after that fix, the current Article 9
+> still ranked too low on pure similarity (it doesn't mention "two years"
+> at all anymore — that's the whole point of the trap), so added one more
+> targeted rule: when a question names an article explicitly ("Article
+> 9"), that article's current chunk is always included. Re-tested — Sakan
+> now correctly finds the real current Article 9, notices the two-year rule
+> isn't in it, and says so, instead of hallucinating the outdated rule as
+> current law.
+>
+> **Also found:** the raw refusal sometimes came back with extra explanatory
+> sentences tacked on after the required exact string, instead of *only*
+> the refusal string as the prompt asks for. Left as-is for now — this is
+> exactly what Day 4, Step 4.5 ("tune refusal behavior") is for.
+>
+> **Side quest earlier in Day 3:** found more PDF text-extraction artifacts
+> by accident (stray spaces splitting words apart, e.g. `terminat ion` →
+> should be "termination", `damage s` → "damages") on top of the ligature
+> bug from Day 2. Fixed in `ingest.py`, then re-ran the whole `ingest.py` →
+> `index.py` pipeline — this is exactly why Step 2.3's "save processed
+> chunks to JSON" makes re-running cheap.
 
-**Checkpoint for Day 3:** You can ask Sakan a question in your terminal and get
-a cited answer, or an honest refusal.
+**Checkpoint for Day 3 — MET:** You can ask Sakan a question in your terminal
+and get a cited answer, or an honest refusal.
 
 ---
 

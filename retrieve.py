@@ -26,11 +26,22 @@ is_current=False chunks by default so Sakan can't accidentally cite
 outdated law.
 """
 
+import re
+
 import chromadb
 
 from index import CHROMA_DIR, COLLECTION_NAME, build_bm25_index, load_chunks, tokenize
 
 RRF_K = 60
+
+# Legal questions often name an exact article ("Under Article 9, does...").
+# Ranking alone can miss it: an amended article's CURRENT text can be
+# genuinely dissimilar in meaning to a question about what it USED to say
+# (found via eval question e01 — the current Article 9 no longer mentions
+# the "two years" rule the old one had, so nothing about vector/keyword
+# similarity points to it). When a query names an article explicitly, that
+# article's current chunk is always included, regardless of how it ranks.
+ARTICLE_MENTION = re.compile(r"\bArticle\s*\(?(\d+)\)?", re.IGNORECASE)
 
 
 def reciprocal_rank_fusion(*ranked_id_lists: list[str], k_constant: int = RRF_K) -> list[str]:
@@ -43,37 +54,50 @@ def reciprocal_rank_fusion(*ranked_id_lists: list[str], k_constant: int = RRF_K)
 
 class Retriever:
     """Loads both indexes once so repeated hybrid_search() calls are cheap
-    — important once app.py (Day 5) calls this on every question asked."""
+    — important once app.py (Day 5) calls this on every question asked.
+
+    Outdated (superseded) articles are excluded from BOTH indexes' search
+    space entirely, not filtered out after ranking. Found the hard way:
+    the old and new versions of an amended article share almost the same
+    label and often similar wording, so they directly compete for the same
+    top-N ranking slots. A "fetch top N, then drop is_current=False"
+    approach can lose the current version completely if the outdated twin
+    happens to rank higher — e.g. a query about the old Article 9 "two-year
+    rule" is naturally MORE similar to the outdated text (which is what
+    that rule was), so it out-ranked the current Article 9 by a wide margin
+    and pushed it out of the top 20 entirely. Excluding outdated chunks
+    from the pool up front means the current version never has to compete
+    with its own outdated twin for a ranking slot."""
 
     def __init__(self):
-        self.chunks = load_chunks()
+        self.chunks = [c for c in load_chunks() if c["is_current"]]
         self.chunks_by_id = {str(c["chunk_id"]): c for c in self.chunks}
+        # "Article N" in a question, with no law specified, means Law
+        # 26/2007 — the base tenancy law everything else amends.
+        self.article_26_2007 = {
+            c["article_no"]: c for c in self.chunks if c["law"] == "26/2007"
+        }
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         self.collection = client.get_collection(COLLECTION_NAME)
         self.bm25 = build_bm25_index(self.chunks)
 
-    def hybrid_search(self, query: str, k: int = 6, include_outdated: bool = False) -> list[dict]:
-        # Cast a wider net than k before filtering out superseded articles,
-        # so a current article ranked just outside the top k doesn't get
-        # squeezed out by an outdated one that happened to rank higher.
-        fetch_n = max(k * 3, 15)
-
-        vector_ranked = self.collection.query(query_texts=[query], n_results=fetch_n)["ids"][0]
+    def hybrid_search(self, query: str, k: int = 6) -> list[dict]:
+        vector_ranked = self.collection.query(
+            query_texts=[query], n_results=k, where={"is_current": True}
+        )["ids"][0]
 
         bm25_scores = self.bm25.get_scores(tokenize(query))
         ranked_indices = sorted(range(len(self.chunks)), key=lambda i: bm25_scores[i], reverse=True)
-        bm25_ranked = [str(self.chunks[i]["chunk_id"]) for i in ranked_indices[:fetch_n]]
+        bm25_ranked = [str(self.chunks[i]["chunk_id"]) for i in ranked_indices[:k]]
 
         fused_ids = reciprocal_rank_fusion(vector_ranked, bm25_ranked)
+        results = [self.chunks_by_id[chunk_id] for chunk_id in fused_ids[:k]]
 
-        results = []
-        for chunk_id in fused_ids:
-            chunk = self.chunks_by_id[chunk_id]
-            if not include_outdated and not chunk["is_current"]:
-                continue
-            results.append(chunk)
-            if len(results) == k:
-                break
+        match = ARTICLE_MENTION.search(query)
+        if match:
+            named_chunk = self.article_26_2007.get(int(match.group(1)))
+            if named_chunk and named_chunk not in results:
+                results = [named_chunk] + results[:k - 1]
         return results
 
 
