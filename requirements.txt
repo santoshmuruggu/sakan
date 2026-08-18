@@ -4,3 +4,4 @@ rank-bm25==0.2.2
 anthropic==0.122.0
 python-dotenv==1.2.3
 deepeval==4.1.8
+streamlit==1.61.1

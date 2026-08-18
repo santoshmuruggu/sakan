@@ -301,12 +301,32 @@ with a real before/after story to put in the README.
 
 ### Day 5 — Give it a face, and put it online
 
-- [ ] **Step 5.1 — `app.py`: Streamlit chat UI.** A text box for the question,
-  an answer area, and the cited article shown inline/expandable underneath.
-- [ ] **Step 5.2 — Add the required disclaimer** ("informational demo, not
-  legal advice — verify current figures with DLD") visibly in the UI.
-- [ ] **Step 5.3 — Local run-through.** Launch it on your machine, click
-  through the golden path and a couple of edge cases yourself.
+- [x] **Step 5.1 — `app.py`: Streamlit chat UI.** Chat-style input, answer
+  rendered per turn, an expandable "Sources" section underneath showing the
+  exact retrieved article text (label + body) so any claim can be checked
+  against the actual source. The retriever is cached across turns
+  (`@st.cache_resource`) so it isn't rebuilt on every question. Works both
+  locally (`.env`) and once deployed (Streamlit Cloud's `st.secrets`) via a
+  small bridge that copies the secret into the same env var `generate.py`
+  already reads.
+- [x] **Step 5.2 — Add the required disclaimer.** A warning banner at the
+  top of the page, always visible on load: "Informational demo, not legal
+  advice... verify current figures... with the Dubai Land Department."
+- [x] **Step 5.3 — Local run-through.** No real browser is available in
+  this sandboxed dev environment (no Chrome/Chromium/Playwright
+  installed), so testing used Streamlit's own first-party testing
+  framework (`streamlit.testing.v1.AppTest`), which actually runs the app
+  script and simulates real interaction — typing into the chat input,
+  submitting, reading back what rendered — rather than just checking the
+  code compiles. Confirmed: disclaimer visible on load, golden-path
+  question ("What is Ejari?") returns a correct cited answer with a
+  "Sources (6)" expander, out-of-scope question ("rent law in Abu Dhabi?")
+  correctly refuses with no sources shown, zero exceptions either way.
+  Also launched the real `streamlit run app.py` server directly and
+  confirmed it starts cleanly, responds healthy, and stops cleanly — this
+  catches server/config issues `AppTest` alone wouldn't. **If you want to
+  see it visually yourself:** run `streamlit run app.py` from the project
+  folder and open the printed `localhost` URL in your own browser.
 - [ ] **Step 5.4 — Push to GitHub.**
 - [ ] **Step 5.5 — Deploy on Streamlit Community Cloud** (free, connects
   directly to your GitHub repo) and get a public link.
