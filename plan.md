@@ -144,12 +144,21 @@ retrieval code exists.
   Spot-checked the trickiest ones by hand (Article 9's two versions, Article
   25's new "landlord wants to sell" ground, the Decree 43/2013 percentage
   table) against the actual PDF text to confirm they're correct.
-- [ ] **Step 2.4 — `index.py`: build the vector index.** Embed every chunk and
-  store it in ChromaDB.
-- [ ] **Step 2.5 — `index.py`: build the BM25 keyword index** over the same
-  chunks using `rank_bm25`.
-- [ ] **Step 2.6 — Quick manual test.** Search for a known term (e.g. "Ejari")
-  in both indexes and confirm the right chunk comes back.
+- [x] **Step 2.4 — `index.py`: build the vector index.** Embeds every chunk
+  with ChromaDB's built-in local embedding model (no API key needed yet —
+  that's only for Day 3's answer-writing LLM) and stores it in `chroma_db/`
+  (gitignored — it's a regenerable build artifact, not source).
+- [x] **Step 2.5 — `index.py`: build the BM25 keyword index** over the same
+  chunks with `rank_bm25`. Rebuilt in memory every run rather than saved to
+  disk — cheap enough at 78 chunks that persisting it isn't worth the extra
+  moving part.
+- [x] **Step 2.6 — Quick manual test.** `index.py` runs both indexes against
+  a real eval question (f01, about contract registration) as a smoke test.
+  Found something worth carrying into Day 3: vector search's #1 result was
+  the **outdated** original Article 4, not the current amended one —
+  exactly the `is_current` mix-up we built the metadata to catch. Day 3's
+  retrieval logic needs to explicitly prefer `is_current: true` chunks, not
+  just take the top-ranked match as-is.
 
 **Checkpoint for Day 2:** Given any question, we can retrieve relevant law
 chunks two different ways (meaning-based and keyword-based) — even though we
