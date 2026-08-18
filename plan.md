@@ -231,21 +231,71 @@ and get a cited answer, or an honest refusal.
 
 ### Day 4 — Prove it's trustworthy (this is the resume-worthy part)
 
-- [ ] **Step 4.1 — Install & configure `deepeval`.**
-- [ ] **Step 4.2 — `eval/test_faithfulness.py`.** Run every question from
-  `eval/questions.json` through Sakan, score each with the `FaithfulnessMetric`
-  (do the claims in the answer actually appear in the retrieved text?).
-- [ ] **Step 4.3 — Citation-verification check.** After generation, confirm
-  the article number cited actually contains the claim made — a second,
-  independent safety net beyond the faithfulness score.
-- [ ] **Step 4.4 — Score refusal accuracy.** Specifically check: for every
-  out-of-scope question, did Sakan correctly refuse instead of guessing?
-- [ ] **Step 4.5 — Tune and re-run.** If any question fails, adjust the
-  prompt, chunking, or retrieval `k` value, then re-run the eval to see the
-  score improve. This before/after is exactly what goes in the README later.
+- [x] **Step 4.1 — Install & configure `deepeval`.** Judge model is Claude
+  Haiku 4.5 via `deepeval`'s native `AnthropicModel` — had to avoid
+  `claude-sonnet-5` (this deepeval version can't parse extended-thinking
+  response blocks) and a retired 2024 Sonnet snapshot (404s on this
+  account now).
+- [x] **Step 4.2 — `eval/test_faithfulness.py`.** 6 hand-picked pytest
+  tests (factual, both amendment-trap edge cases, refusal, prompt
+  injection) using `FaithfulnessMetric` + plain behavioral asserts. All 6
+  passing — `pytest eval/test_faithfulness.py -v`.
+- [x] **Step 4.3 — Citation-verification check.** `eval/run_eval.py`
+  extracts every `(Law X, Article N)` / `(Decree X, Article N)` citation
+  from each answer and checks it against the chunks actually given to the
+  model that turn — catches a hallucinated citation even if it happens to
+  sound plausible. **100% grounded (26/26)** on every question that got a
+  real answer, both before and after tuning.
+- [x] **Step 4.4 — Score refusal accuracy.** `eval/run_eval.py` runs all
+  36 questions and checks refusal behavior against each question's
+  `should_refuse` label, broken down by category.
+- [x] **Step 4.5 — Tune and re-run.**
 
-**Checkpoint for Day 4:** A numeric, repeatable score for "does this system
-tell the truth" — not just your gut feeling from Day 3's manual test.
+**Before/after — the numbers that go in the README:**
+
+| Metric | Before tuning | After tuning |
+|---|---|---|
+| Refusal accuracy (36 questions) | 32/36 (89%) | **33/36 (92%)** |
+| Citation grounding (26 graded questions) | 26/26 (100%) | 26/26 (100%) |
+| Avg faithfulness score (threshold 0.8) | 0.99 | **0.99** (dipped to 0.98 mid-tune, see below) |
+
+**What tuning actually changed, and why** — two real findings, not just
+number-chasing:
+1. **Inconsistent refusal phrasing.** The first pass showed the guarded
+   prompt used the exact `"{REFUSAL}"` string for plain out-of-scope
+   questions, but declined differently-worded requests (draft a legal
+   letter, a prompt-injection attempt) without it — behaviorally correct,
+   but inconsistent and harder to test automatically. Rewrote the prompt
+   so every kind of decline leads with the same marker, with an optional
+   explanation after. Fixed `o05` (the legal-letter request) outright.
+2. **A real faithfulness catch, not a false alarm.** Re-running
+   `eval/test_faithfulness.py` after that prompt change caused
+   `test_rent_increase_notice_question` to FAIL — the judge caught Sakan
+   asserting that Article 14's 90-day notice for *amending lease terms*
+   also covered *choosing not to renew*, something the current (amended)
+   Article 14 text doesn't actually say (only the old, superseded wording
+   explicitly listed both cases). Added an explicit instruction against
+   extending a rule to a related-but-unstated situation. Re-tested — the
+   answer now correctly distinguishes the two and says the source set
+   doesn't specify a non-renewal notice period. This is the dip-then-
+   recovery in the faithfulness number above.
+
+**A note on the 3 remaining "failed" refusal questions (e01, e09, o08):**
+manually reading the actual answers (and, for `o08`, the passing pytest
+behavioral test) confirms all three are honest, well-grounded, and safe —
+they just don't match the crude "starts with the exact refusal string"
+check `run_eval.py` uses. `e01`/`e09` correctly lead with the refusal
+marker before pivoting to a real, current, grounded correction (arguably
+the *most* honest way to answer a question built on a false premise).
+`o08` declines the prompt-injection attempt in different words instead of
+the exact marker. Documented here rather than silently "fixed" by
+loosening the check to hide it — an evaluation section that's honest
+about what its own metric can't capture is worth more than one that
+claims 100% on everything.
+
+**Checkpoint for Day 4 — MET:** A numeric, repeatable score for "does this
+system tell the truth" — not just gut feeling from Day 3's manual test —
+with a real before/after story to put in the README.
 
 ---
 

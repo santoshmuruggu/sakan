@@ -4,3 +4,6 @@ __pycache__/
 .env
 .streamlit/secrets.toml
 chroma_db/
+.deepeval/
+.deepeval_cache.json
+.pytest_cache/
