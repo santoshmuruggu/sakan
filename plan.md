@@ -121,14 +121,29 @@ retrieval code exists.
 
 ### Day 2 — Turn the PDFs into a searchable index
 
-- [ ] **Step 2.1 — `ingest.py`: parse and clean.** Extract raw text from the
-  PDFs, strip page headers/footers/junk, and normalize whitespace.
-- [ ] **Step 2.2 — Chunk by Article boundary.** Split the cleaned text
-  wherever a new "Article (N)" begins, and attach `article_no` + a title as
-  metadata on each chunk. (This is the `chunk_by_article` function shown in
-  the guide — I'll explain each line when we write it.)
-- [ ] **Step 2.3 — Save processed chunks** to `data/processed/` as JSON, so we
-  never have to re-parse the PDFs again.
+- [x] **Step 2.1 — `ingest.py`: parse and clean.** Extracted raw text with
+  `pypdf`. Found and fixed two real data-quality bugs along the way: (1) the
+  source PDFs have a font defect that silently drops the letter "i" from
+  ligatures like "fi"/"ffi" ("five" → "fve", "official" → "offcial") — fixed
+  with a checked replacement table; (2) page headers/footers/footnote
+  markers were landing mid-sentence wherever a PDF page break fell, not just
+  at page edges — fixed with a line-level junk filter.
+- [x] **Step 2.2 — Chunk by Article boundary.** Split on `Article (N)`
+  **header lines specifically** (not just any regex match) — legal text is
+  full of in-text cross-references like "...as stipulated in Article (9) of
+  this Law," which a naive regex would misfire on and treat as new article
+  boundaries. Also solved the Law 33/2008 numbering collision from Step
+  1.3: chunks are tagged with both `law` (which instrument's numbering:
+  `26/2007`, `33/2008`, or `Decree 43/2013`) and `article_no`, plus
+  `is_current` — so "Article 9" from the outdated 2007 text and the current
+  2008 replacement text never get confused with each other. Non-article
+  prose (the EJARI registration guide) is chunked by section heading
+  instead, with a 1500-character size cap as a safety net.
+- [x] **Step 2.3 — Save processed chunks** to `data/processed/chunks.json` —
+  78 chunks total (54 law/decree articles + 24 EJARI-guide prose sections).
+  Spot-checked the trickiest ones by hand (Article 9's two versions, Article
+  25's new "landlord wants to sell" ground, the Decree 43/2013 percentage
+  table) against the actual PDF text to confirm they're correct.
 - [ ] **Step 2.4 — `index.py`: build the vector index.** Embed every chunk and
   store it in ChromaDB.
 - [ ] **Step 2.5 — `index.py`: build the BM25 keyword index** over the same
