@@ -86,24 +86,32 @@ big leap.
 > questions *after* the system exists, we'll unconsciously write questions the
 > system already handles well. Writing them first means they're an honest test.
 
-- [ ] **Step 1.1 — Project skeleton.** Create the folder structure (`data/raw`,
-  `data/processed`, `eval/`, empty placeholder files). You'll see exactly what
-  each file is for.
-- [ ] **Step 1.2 — Download source documents.** Get the real PDFs: Law No. 26
-  of 2007, Law No. 33 of 2008 (amendment), and the DLD Tenancy Guide, from the
-  Dubai Land Department's official site. We use the real, current documents —
-  not paraphrases — because the whole point of Sakan is citing primary sources.
-- [ ] **Step 1.3 — Skim & sanity-check the PDFs.** Confirm they're readable as
-  text (not scanned images that would need OCR), and note how Articles are
-  numbered/formatted, since that affects our chunking logic later.
-- [ ] **Step 1.4 — Write 30–40 eval questions** in `eval/questions.json`. We'll
-  mix three types:
-  - **Factual** — answerable directly from the law ("What is the maximum notice
-    period for non-renewal?")
-  - **Edge-case** — tricky but still in-scope (ambiguous wording, multi-article
-    answers)
-  - **Out-of-scope / adversarial** — questions Sakan should *refuse*, e.g.
-    "What's the rent law in Abu Dhabi?" This tests that it doesn't guess.
+- [x] **Step 1.1 — Project skeleton.** Folder structure (`data/`, `eval/`,
+  empty placeholder files `ingest.py`/`index.py`/`retrieve.py`/`generate.py`/
+  `app.py`), a Python virtual environment (`venv/`), and a git repo were
+  already set up before we started.
+- [x] **Step 1.2 — Download source documents.** Downloaded the real PDFs
+  directly from official Dubai Land Department URLs into `data/raw/`:
+  `law_26_2007.pdf` (10 pages), `law_33_2008.pdf` (6 pages), and
+  `tenancy_guide.pdf` (42 pages — this one turned out to also contain the full
+  text of **Decree No. 43 of 2013**, the tiered rent-increase calculator, plus
+  both laws reprinted as appendices, so we don't need a separate live-scrape
+  step for the percentage table).
+- [x] **Step 1.3 — Skim & sanity-check the PDFs.** Extracted text with
+  `pdftotext` and confirmed all three are real selectable text (no OCR
+  needed), and that `Article (N)` headings are formatted consistently — the
+  chunking regex from the guide will work. Also discovered an important
+  wrinkle for Day 2: Law No. 33 of 2008 explicitly **supersedes** Articles
+  2, 3, 4, 9, 13, 14, 15, 25, 26, 29, and 36 of the 2007 law — so those
+  article numbers exist in *two* versions across our two law PDFs, and only
+  the newer one is current law. We'll need to tag chunks with which document
+  they came from so retrieval/generation can prefer the current version.
+- [x] **Step 1.4 — Write 36 eval questions** in `eval/questions.json` (18
+  factual, 9 edge-case, 9 out-of-scope — including a couple designed to
+  specifically trip up a system that doesn't know about the Law 33/2008
+  supersession, and one prompt-injection attempt). Written and grounded
+  against the actual downloaded text, before any retrieval/generation code
+  exists.
 
 **Checkpoint for Day 1:** You have real source PDFs saved locally, and a
 question file that defines what "success" looks like — before a single line of
