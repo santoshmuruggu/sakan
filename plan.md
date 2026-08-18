@@ -327,9 +327,17 @@ with a real before/after story to put in the README.
   catches server/config issues `AppTest` alone wouldn't. **If you want to
   see it visually yourself:** run `streamlit run app.py` from the project
   folder and open the printed `localhost` URL in your own browser.
-- [ ] **Step 5.4 — Push to GitHub.**
+- [x] **Step 5.4 — Push to GitHub.** Public repo created and pushed:
+  **https://github.com/santoshmuruggu/sakan** (12 commits, full history
+  from Day 1 through here). Along the way, fixed a real deployment gap:
+  `chroma_db/` is gitignored (it's a regenerable build artifact), but a
+  fresh container only runs `streamlit run app.py`, never `index.py` — so
+  `Retriever` now builds the index itself on first launch if it's missing,
+  instead of assuming it's already there.
 - [ ] **Step 5.5 — Deploy on Streamlit Community Cloud** (free, connects
-  directly to your GitHub repo) and get a public link.
+  directly to your GitHub repo) and get a public link. This step needs
+  YOUR login (Streamlit Cloud deploys via your own GitHub OAuth) — see the
+  walkthrough below.
 
 **Checkpoint for Day 5:** A live URL you can send anyone, that answers a
 real question in under ~10 seconds.
