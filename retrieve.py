@@ -30,7 +30,15 @@ import re
 
 import chromadb
 
-from index import CHROMA_DIR, COLLECTION_NAME, build_bm25_index, chunk_label, load_chunks, tokenize
+from index import (
+    CHROMA_DIR,
+    COLLECTION_NAME,
+    build_bm25_index,
+    build_vector_index,
+    chunk_label,
+    load_chunks,
+    tokenize,
+)
 
 RRF_K = 60
 
@@ -70,7 +78,8 @@ class Retriever:
     with its own outdated twin for a ranking slot."""
 
     def __init__(self):
-        self.chunks = [c for c in load_chunks() if c["is_current"]]
+        all_chunks = load_chunks()
+        self.chunks = [c for c in all_chunks if c["is_current"]]
         self.chunks_by_id = {str(c["chunk_id"]): c for c in self.chunks}
         # "Article N" in a question, with no law specified, means Law
         # 26/2007 — the base tenancy law everything else amends.
@@ -78,7 +87,16 @@ class Retriever:
             c["article_no"]: c for c in self.chunks if c["law"] == "26/2007"
         }
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        self.collection = client.get_collection(COLLECTION_NAME)
+        existing = {c.name for c in client.list_collections()}
+        if COLLECTION_NAME in existing:
+            self.collection = client.get_collection(COLLECTION_NAME)
+        else:
+            # chroma_db/ is a regenerable build artifact, gitignored on
+            # purpose — a fresh deploy (e.g. Streamlit Community Cloud)
+            # only runs `streamlit run app.py`, not ingest.py/index.py, so
+            # the index has to be able to build itself on first launch
+            # rather than assuming it's already there.
+            self.collection = build_vector_index(all_chunks)
         self.bm25 = build_bm25_index(self.chunks)
 
     def hybrid_search(self, query: str, k: int = 6) -> list[dict]:
