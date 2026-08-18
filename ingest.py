@@ -95,8 +95,24 @@ LIGATURE_FIXES = {
 }
 
 
+# A second, unrelated PDF defect: some words got a stray space inserted
+# mid-word ("terminat ion", "damage s") rather than a dropped letter. Found
+# the same way as LIGATURE_FIXES — scanning the corpus for suspicious
+# splits and checking each one against its surrounding sentence.
+SPACE_SPLIT_FIXES = {
+    "specifi c": "specific",
+    "terminat ion": "termination",
+    "renovat ed": "renovated",
+    "refurbish ed": "refurbished",
+    "re constructed": "reconstructed",
+    "include s": "includes",
+    "damage s": "damages",
+}
+
+
 def fix_ligature_artifacts(text: str) -> str:
-    text = text.replace("specifi c", "specific")
+    for broken, fixed in SPACE_SPLIT_FIXES.items():
+        text = text.replace(broken, fixed)
     for broken, fixed in LIGATURE_FIXES.items():
         text = re.sub(rf"\b{re.escape(broken)}\b", fixed, text)
     return text

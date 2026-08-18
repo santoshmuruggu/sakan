@@ -1,3 +1,5 @@
 pypdf==6.16.1
 chromadb==1.5.9
 rank-bm25==0.2.2
+anthropic==0.122.0
+python-dotenv==1.2.3

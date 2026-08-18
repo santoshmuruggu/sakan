@@ -176,14 +176,29 @@ don't have an AI-generated answer yet.
 - [ ] **Step 3.2 — Get an LLM API key working.** Using Anthropic (Claude).
   Waiting on the key — will do a small end-to-end "hello world" call to
   confirm it and billing are set up before wiring it into the real pipeline.
-- [ ] **Step 3.3 — `generate.py`: the guarded prompt.** Write the system
-  prompt that forces the model to answer *only* from retrieved context, cite
-  `(Article N)` per claim, and reply `"Not covered by this source set."` when
-  it can't find an answer.
+- [x] **Step 3.3 — `generate.py`: the guarded prompt.** Written and wired up
+  (retrieve → format context → guarded system prompt → Claude Haiku), citing
+  each chunk's exact label (e.g. `(Law 26/2007, Article 9)` or
+  `(Decree 43/2013, Article 1)`) instead of the guide's plain `(Article N)`,
+  since our corpus has three different article-numbering sequences and a
+  bare number would be ambiguous. Also explicitly told not to follow
+  instructions that appear inside the user's question (prompt-injection
+  guard, matching eval question o08). Tested everything that doesn't need
+  the API key: prompt formatting looks right, and the no-chunks-retrieved
+  case correctly short-circuits straight to the refusal string without even
+  calling the LLM. **Blocked on Step 3.2** for the actual generation calls.
 - [ ] **Step 3.4 — Wire it together.** question → retrieve → generate →
-  printed answer, runnable from the command line.
+  printed answer, runnable from the command line. (Code is written in
+  `generate.py`'s `main()` — just needs the API key to actually run.)
 - [ ] **Step 3.5 — Manual smoke test.** Ask it 3–4 real questions and 1
   deliberately out-of-scope question, and read the answers yourself.
+
+> **Side quest while working through Day 3:** found more PDF text-extraction
+> artifacts by accident (stray spaces splitting words apart, e.g.
+> `terminat ion` → should be "termination", `damage s` → "damages") on top of
+> the ligature bug from Day 2. Went back and fixed these in `ingest.py` too,
+> then re-ran the whole `ingest.py` → `index.py` pipeline — this is exactly
+> why Step 2.3's "save processed chunks to JSON" makes re-running cheap.
 
 **Checkpoint for Day 3:** You can ask Sakan a question in your terminal and get
 a cited answer, or an honest refusal.
