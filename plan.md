@@ -168,11 +168,14 @@ don't have an AI-generated answer yet.
 
 ### Day 3 — Make it answer questions, grounded in the text
 
-- [ ] **Step 3.1 — `retrieve.py`: hybrid search.** Combine vector + BM25
-  results using Reciprocal Rank Fusion into one ranked list of top chunks.
-- [ ] **Step 3.2 — Get an LLM API key working.** Small end-to-end "hello
-  world" call to OpenAI or Anthropic to confirm your key and billing are set
-  up, before wiring it into the real pipeline.
+- [x] **Step 3.1 — `retrieve.py`: hybrid search.** Combines vector + BM25
+  results using Reciprocal Rank Fusion, then filters out `is_current: false`
+  chunks — confirmed this fixes the Day 2 finding: the registration question
+  now returns the current amended Article 4, not the outdated one. Ran as a
+  demo against 4 real questions and every top hit was the right article.
+- [ ] **Step 3.2 — Get an LLM API key working.** Using Anthropic (Claude).
+  Waiting on the key — will do a small end-to-end "hello world" call to
+  confirm it and billing are set up before wiring it into the real pipeline.
 - [ ] **Step 3.3 — `generate.py`: the guarded prompt.** Write the system
   prompt that forces the model to answer *only* from retrieved context, cite
   `(Article N)` per claim, and reply `"Not covered by this source set."` when

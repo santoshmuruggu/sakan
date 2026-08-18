@@ -1,0 +1,101 @@
+"""
+retrieve.py — Day 3, Step 3.1 of the Sakan build plan.
+
+Combines the two indexes from index.py into ONE ranked list of relevant
+article chunks per question — "hybrid search" from the build guide.
+
+WHY COMBINE TWO SEARCH METHODS INSTEAD OF PICKING ONE:
+  - Vector search finds chunks by MEANING, so a question phrased
+    differently from the law's own wording ("kicked out") still finds the
+    right article ("eviction").
+  - BM25 keyword search finds chunks by EXACT WORD MATCH, so a precise
+    legal term (like "Ejari") or an article number doesn't get blurred
+    together with similar-sounding but different text the way embeddings
+    sometimes do.
+Reciprocal Rank Fusion (RRF) merges both ranked lists into one: each chunk
+earns 1/(K + rank) points from every list it appears in, so a chunk that
+shows up in BOTH lists (even outside the very top of either) can outrank
+something that's #1 in just one.
+
+WHY WE FILTER OUT SUPERSEDED ARTICLES HERE, NOT EARLIER: Day 2's index.py
+smoke test showed vector search's #1 hit for a rent-registration question
+was the OUTDATED pre-2008 wording of Article 4, not the current amended
+one — both texts are legitimately "about Article 4", so nothing in the
+ranking math itself knows one of them is overruled. hybrid_search drops
+is_current=False chunks by default so Sakan can't accidentally cite
+outdated law.
+"""
+
+import chromadb
+
+from index import CHROMA_DIR, COLLECTION_NAME, build_bm25_index, load_chunks, tokenize
+
+RRF_K = 60
+
+
+def reciprocal_rank_fusion(*ranked_id_lists: list[str], k_constant: int = RRF_K) -> list[str]:
+    scores: dict[str, float] = {}
+    for ranked_ids in ranked_id_lists:
+        for rank, doc_id in enumerate(ranked_ids):
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k_constant + rank + 1)
+    return sorted(scores, key=lambda doc_id: scores[doc_id], reverse=True)
+
+
+class Retriever:
+    """Loads both indexes once so repeated hybrid_search() calls are cheap
+    — important once app.py (Day 5) calls this on every question asked."""
+
+    def __init__(self):
+        self.chunks = load_chunks()
+        self.chunks_by_id = {str(c["chunk_id"]): c for c in self.chunks}
+        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        self.collection = client.get_collection(COLLECTION_NAME)
+        self.bm25 = build_bm25_index(self.chunks)
+
+    def hybrid_search(self, query: str, k: int = 6, include_outdated: bool = False) -> list[dict]:
+        # Cast a wider net than k before filtering out superseded articles,
+        # so a current article ranked just outside the top k doesn't get
+        # squeezed out by an outdated one that happened to rank higher.
+        fetch_n = max(k * 3, 15)
+
+        vector_ranked = self.collection.query(query_texts=[query], n_results=fetch_n)["ids"][0]
+
+        bm25_scores = self.bm25.get_scores(tokenize(query))
+        ranked_indices = sorted(range(len(self.chunks)), key=lambda i: bm25_scores[i], reverse=True)
+        bm25_ranked = [str(self.chunks[i]["chunk_id"]) for i in ranked_indices[:fetch_n]]
+
+        fused_ids = reciprocal_rank_fusion(vector_ranked, bm25_ranked)
+
+        results = []
+        for chunk_id in fused_ids:
+            chunk = self.chunks_by_id[chunk_id]
+            if not include_outdated and not chunk["is_current"]:
+                continue
+            results.append(chunk)
+            if len(results) == k:
+                break
+        return results
+
+
+def chunk_label(chunk: dict) -> str:
+    if chunk["law"]:
+        return f"Law {chunk['law']}, Article {chunk['article_no']}"
+    return f"Tenancy Guide — {chunk['section']}"
+
+
+def main():
+    retriever = Retriever()
+    demo_questions = [
+        "Does a lease contract need to be registered anywhere to be enforceable?",
+        "What is Ejari?",
+        "By what percentage can rent increase if it's 25% below the average rental value?",
+        "How much notice for eviction if the landlord wants to sell the property?",
+    ]
+    for question in demo_questions:
+        print(f"\nQ: {question}")
+        for chunk in retriever.hybrid_search(question, k=3):
+            print(f"  [{chunk_label(chunk)}] {chunk['text'][:120]}...")
+
+
+if __name__ == "__main__":
+    main()
