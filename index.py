@@ -1,7 +1,7 @@
 """
-index.py — Day 2, Steps 2.4-2.5 of the Sakan build plan.
+index.py — builds the search indexes over the chunks ingest.py produced.
 
-Builds two separate search indexes over the chunks ingest.py produced:
+Builds two separate search indexes:
 
   1. A VECTOR index (ChromaDB) — finds chunks by MEANING, using
      embeddings. Good for questions phrased differently than the law's
@@ -10,10 +10,9 @@ Builds two separate search indexes over the chunks ingest.py produced:
      smarter Ctrl+F. Good for legal terms embeddings can blur together,
      e.g. "Ejari" or an exact article number.
 
-retrieve.py (Day 3) will combine results from both — that's the "hybrid
-search" the build guide asks for. ChromaDB's default embedding model runs
-locally (no API key needed); an LLM API key only becomes necessary in Day
-3, for the answer-writing step.
+retrieve.py combines results from both for hybrid search. ChromaDB's
+default embedding model runs locally (no API key needed); an LLM API key
+only becomes necessary at the answer-generation step.
 """
 
 import json

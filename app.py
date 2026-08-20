@@ -1,7 +1,5 @@
 """
-app.py — Day 5, Steps 5.1-5.2 of the Sakan build plan.
-
-The Streamlit chat UI: type a question about Dubai tenancy law, get an
+app.py — the Streamlit chat UI: type a question about Dubai tenancy law, get an
 answer grounded in the actual law text, with the source article(s) shown
 so you can check it yourself.
 """

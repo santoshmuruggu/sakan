@@ -1,11 +1,9 @@
 """
-ingest.py — Day 2, Steps 2.1-2.3 of the Sakan build plan.
+ingest.py — turns the raw PDFs in data/raw/ into clean, article-tagged
+text chunks and saves them to data/processed/chunks.json, ready for
+index.py to embed and index.
 
-Turns the raw PDFs in data/raw/ into clean, article-tagged text chunks
-and saves them to data/processed/chunks.json, ready for index.py to
-embed and index.
-
-WHY THIS FILE IS MORE THAN "READ PDF, SPLIT ON ARTICLE" (a note for later-you):
+WHY THIS FILE IS MORE THAN "READ PDF, SPLIT ON ARTICLE":
 
 Law No. 33 of 2008 doesn't just add new articles — its own Article (1) is a
 meta-clause that says "Articles (2), (3), (4), (9), (13), (14), (15), (25),
@@ -17,8 +15,8 @@ wording (the current law). On top of that, Law 33/2008 also has its OWN
 Article (1) and Article (2) (a commencement clause) in its own numbering,
 which collides with the replacement Article (2) it just produced. Flattening
 all of this into one naive "article_no" field would make "Article 9" and
-"Article 2" ambiguous — exactly the kind of citation corruption the build
-guide warns about.
+"Article 2" ambiguous — exactly the kind of citation corruption that
+would undermine trust in the answers.
 
 The fix: every chunk is tagged with BOTH `law` (which legal instrument's
 numbering it belongs to: "26/2007", "33/2008", or "Decree 43/2013") AND
@@ -168,8 +166,9 @@ def strip_junk_lines(text: str) -> str:
 
 
 def split_into_articles(text: str) -> list[tuple[str, str]]:
-    """Split text on 'Article (N)' HEADER LINES, per the build guide's
-    chunk-by-article-boundary approach. Must run on text that still has its
+    """Split text on 'Article (N)' HEADER LINES (chunk-by-article-boundary,
+    not fixed-size windows, so an article's meaning never gets split
+    across chunks). Must run on text that still has its
     original line breaks (before collapse_whitespace) so ARTICLE_HEADER can
     tell real headers apart from in-text references. Returns (article_no,
     body) tuples in document order. Text before the first header (the "We,

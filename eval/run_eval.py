@@ -1,20 +1,18 @@
 """
-eval/run_eval.py — Day 4, Steps 4.3-4.4 of the Sakan build plan.
+eval/run_eval.py — runs EVERY question in eval/questions.json through the
+real pipeline (retrieve -> generate) and scores the results three ways:
 
-Runs EVERY question in eval/questions.json through the real pipeline
-(retrieve -> generate) and scores the results three ways:
-
-  1. CITATION GROUNDING (Step 4.3, no LLM judge needed) — for every
-     article label Sakan cites in its answer, was that article actually
-     among the chunks it was given this turn? If Sakan cites something it
-     was never shown, that's a hallucinated citation regardless of
-     whether the cited article happens to be right — the model couldn't
-     have verified it without seeing the actual text.
-  2. REFUSAL ACCURACY (Step 4.4, no LLM judge needed) — for every
-     question, did Sakan refuse when (and only when) it should have?
-     Checked two ways: BEHAVIORAL (did it refuse at all, even with extra
-     text tacked on) and EXACT-FORMAT (was it precisely the required
-     refusal string, nothing else — the prompt asks for this literally).
+  1. CITATION GROUNDING (no LLM judge needed) — for every article label
+     Sakan cites in its answer, was that article actually among the
+     chunks it was given this turn? If Sakan cites something it was never
+     shown, that's a hallucinated citation regardless of whether the
+     cited article happens to be right — the model couldn't have
+     verified it without seeing the actual text.
+  2. REFUSAL ACCURACY (no LLM judge needed) — for every question, did
+     Sakan refuse when (and only when) it should have? Checked two ways:
+     BEHAVIORAL (did it refuse at all, even with extra text tacked on)
+     and EXACT-FORMAT (was it precisely the required refusal string,
+     nothing else — the prompt asks for this literally).
   3. FAITHFULNESS (deepeval's FaithfulnessMetric, LLM-judged) — only for
      questions that expect a real grounded answer. A refusal has no
      factual claims to check faithfulness of, so scoring it doesn't mean
@@ -23,7 +21,7 @@ Runs EVERY question in eval/questions.json through the real pipeline
 Prints a summary and saves the full per-question detail to
 eval/results.json, which eval/test_faithfulness.py doesn't produce (it's
 a handful of pytest assertions, not an aggregate report) but the README
-(Day 6) and Step 4.5's tuning both need.
+and prompt-tuning work both need.
 """
 
 import json

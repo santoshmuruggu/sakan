@@ -14,7 +14,7 @@
     "fields": {
       "should_refuse": "true if the only correct behavior is Sakan's exact refusal string: 'Not covered by this source set.'",
       "expected_sources": "article(s)/decree a correct grounded answer should cite. Empty when should_refuse is true.",
-      "notes": "why this question is included / what a correct vs. sloppy answer looks like — for you (the human grader) when scoring Day 4 results."
+      "notes": "why this question is included / what a correct vs. sloppy answer looks like — for you (the human grader) when scoring eval results."
     }
   },
   "questions": [

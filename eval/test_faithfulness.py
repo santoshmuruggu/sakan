@@ -1,24 +1,22 @@
 """
-eval/test_faithfulness.py — Day 4, Step 4.2 of the Sakan build plan.
+eval/test_faithfulness.py — a pytest-native eval suite using deepeval's
+FaithfulnessMetric: for each question, is every claim in Sakan's answer
+actually backed up by the articles it retrieved, or did the model add
+something that isn't there? `pytest eval/test_faithfulness.py -v` gives
+a "tests pass/fail" style CI artifact — most small RAG projects skip
+automated evaluation entirely, so this is the highest-leverage piece.
 
-A pytest-native eval suite using deepeval's FaithfulnessMetric: for each
-question, is every claim in Sakan's answer actually backed up by the
-articles it retrieved, or did the model add something that isn't there?
-`pytest eval/test_faithfulness.py -v` gives the "tests pass/fail" style
-CI artifact the build guide calls the highest-leverage thing a junior RAG
-project can add — most skip evaluation entirely.
-
-This file covers a handful of representative questions by hand, matching
-the guide's own example. The FULL 36-question run (every question in
-eval/questions.json, scored + a refusal-accuracy + citation-grounding
-report) lives in eval/run_eval.py — a pytest file isn't the right shape
-for that aggregate report, but this file is the right shape for "run this
-in CI and see if it's still grounded."
+This file covers a handful of representative questions by hand. The FULL
+36-question run (every question in eval/questions.json, scored + a
+refusal-accuracy + citation-grounding report) lives in eval/run_eval.py —
+a pytest file isn't the right shape for that aggregate report, but this
+file is the right shape for "run this in CI and see if it's still
+grounded."
 
 The judge model is Claude Haiku 4.5 — same model family Sakan's own
-generation uses (per the build guide's cost guidance to keep this cheap).
-Not one of the newer extended-thinking-capable Sonnet models: this
-deepeval version chokes on those models' thinking blocks in the response.
+generation uses, to keep judge calls cheap. Not one of the newer
+extended-thinking-capable Sonnet models: this deepeval version chokes on
+those models' thinking blocks in the response.
 """
 
 import sys

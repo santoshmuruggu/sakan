@@ -1,8 +1,7 @@
 """
-generate.py — Day 3, Steps 3.3-3.5 of the Sakan build plan.
-
-Takes a question + the chunks retrieve.py found for it, and asks an LLM to
-answer USING ONLY THOSE CHUNKS. This is the guardrail that makes Sakan
+generate.py — takes a question and the chunks retrieve.py found for it,
+and asks an LLM to answer USING ONLY THOSE CHUNKS. This is the guardrail
+that makes Sakan
 trustworthy instead of just another chatbot: the model isn't allowed to
 answer from what it already "knows" about UAE law (which could be wrong,
 outdated, or about the wrong emirate) — only from the exact text we hand

@@ -8,3 +8,4 @@ chroma_db/
 .deepeval_cache.json
 .pytest_cache/
 plan.md
+Full build guide.txt

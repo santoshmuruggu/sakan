@@ -1,8 +1,6 @@
 """
-retrieve.py — Day 3, Step 3.1 of the Sakan build plan.
-
-Combines the two indexes from index.py into ONE ranked list of relevant
-article chunks per question — "hybrid search" from the build guide.
+retrieve.py — combines the two indexes from index.py into ONE ranked list
+of relevant article chunks per question ("hybrid search").
 
 WHY COMBINE TWO SEARCH METHODS INSTEAD OF PICKING ONE:
   - Vector search finds chunks by MEANING, so a question phrased
@@ -17,11 +15,11 @@ earns 1/(K + rank) points from every list it appears in, so a chunk that
 shows up in BOTH lists (even outside the very top of either) can outrank
 something that's #1 in just one.
 
-WHY WE FILTER OUT SUPERSEDED ARTICLES HERE, NOT EARLIER: Day 2's index.py
-smoke test showed vector search's #1 hit for a rent-registration question
-was the OUTDATED pre-2008 wording of Article 4, not the current amended
-one — both texts are legitimately "about Article 4", so nothing in the
-ranking math itself knows one of them is overruled. hybrid_search drops
+WHY WE FILTER OUT SUPERSEDED ARTICLES HERE, NOT EARLIER: a smoke test
+showed vector search's #1 hit for a rent-registration question was the
+OUTDATED pre-2008 wording of Article 4, not the current amended one —
+both texts are legitimately "about Article 4", so nothing in the ranking
+math itself knows one of them is overruled. hybrid_search drops
 is_current=False chunks by default so Sakan can't accidentally cite
 outdated law.
 """
@@ -62,7 +60,7 @@ def reciprocal_rank_fusion(*ranked_id_lists: list[str], k_constant: int = RRF_K)
 
 class Retriever:
     """Loads both indexes once so repeated hybrid_search() calls are cheap
-    — important once app.py (Day 5) calls this on every question asked.
+    — important since app.py calls this on every question asked.
 
     Outdated (superseded) articles are excluded from BOTH indexes' search
     space entirely, not filtered out after ranking. Found the hard way:
