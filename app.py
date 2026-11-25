@@ -4,18 +4,34 @@ answer grounded in the actual law text, with the source article(s) shown
 so you can check it yourself.
 """
 
+import importlib
+
 import anthropic
 import httpx
 import streamlit as st
 
-from generate import (
+import generate
+import index
+import retrieve
+
+# Streamlit re-runs this script on every interaction, but modules it
+# imports stay cached in the server process. After a redeploy pulls new
+# code, the OLD generate.py would keep running against the NEW app.py
+# (an ImportError on any newly added name) until someone manually reboots
+# the app. Reloading these small local modules each run keeps them in step
+# with the code on disk. Dependency order matters: generate imports from
+# retrieve, which imports from index.
+for module in (index, retrieve, generate):
+    importlib.reload(module)
+
+from generate import (  # noqa: E402
     OLLAMA_MODEL,
     PROVIDER,
     REFUSAL,
     generate_answer,
     local_anthropic_key,
 )
-from retrieve import Retriever, chunk_label
+from retrieve import Retriever, chunk_label  # noqa: E402
 
 st.set_page_config(
     page_title="Sakan — Dubai Tenancy Law Q&A",
