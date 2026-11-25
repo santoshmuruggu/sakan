@@ -6,6 +6,9 @@ an answer quoted from the actual law text, with the exact article cited —
 or an honest refusal if the law doesn't cover it.
 
 **Live demo:** https://santoshmuruggusakan.streamlit.app/
+(bring your own [Claude API key](https://console.anthropic.com/settings/keys),
+pasted into the sidebar. No key? [Run it locally with Ollama](#running-locally),
+free and fully offline.)
 
 ## Why
 
@@ -65,7 +68,7 @@ Law PDFs → chunked into Articles → embedded + keyword-indexed
 | Retrieve | `retrieve.py` | Hybrid search: merges vector + keyword results with Reciprocal Rank Fusion, then excludes superseded article text so only current law is ever surfaced |
 | Generate | `generate.py` | A guarded prompt to Claude Haiku: answer only from the retrieved articles, cite each claim, refuse with a fixed string if the answer isn't in the source set |
 | Verify | `eval/run_eval.py` | Extracts every citation from an answer and checks it against the chunks actually retrieved that turn, catching a hallucinated citation even if it sounds plausible |
-| UI | `app.py` | Streamlit chat interface with an expandable "Sources" panel showing the exact article text behind each answer |
+| UI | `app.py` | Streamlit chat interface with an expandable "Sources" panel showing the exact article text behind each answer. Asks each visitor for their own Claude API key, or runs on a local Ollama model |
 
 ### Two real correctness bugs the design has to handle
 
@@ -127,15 +130,31 @@ python eval/run_eval.py               # full 36-question report
 ## Running locally
 
 ```
+git clone https://github.com/santoshmuruggu/sakan.git && cd sakan
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY
+```
 
+Then pick a model in `.env`:
+
+- **Claude** (what the eval numbers above were measured with): set
+  `ANTHROPIC_API_KEY=sk-ant-...`.
+- **Ollama, free and fully local, no API key**: install
+  [Ollama](https://ollama.com/download), run `ollama pull llama3.1:8b`, and
+  set `LLM_PROVIDER=ollama` in `.env`. Any Ollama chat model works
+  (`OLLAMA_MODEL=...`). Smaller local models follow the citation/refusal
+  rules less reliably than Claude Haiku.
+
+```
 streamlit run app.py
 ```
+
+If `.env` has neither, the app asks for a Claude key in the sidebar, the
+same as the live demo. The live demo has no key of its own: the app only
+reads a key from a local `.env` file or from the visitor, and ignores any
+key set as a hosting-platform secret.
 
 The vector index builds itself on first run if `chroma_db/` doesn't exist
 yet, so a fresh checkout works without a separate indexing step.
@@ -146,10 +165,11 @@ yet, so a fresh checkout works without a separate indexing step.
   search), merged with Reciprocal Rank Fusion
 - **Generation:** Claude Haiku via the Anthropic API — a small, cheap
   model is enough since it only has to answer from a short retrieved
-  context, not recall facts from training
+  context, not recall facts from training. Or any local model via Ollama
 - **Evaluation:** `deepeval`'s `FaithfulnessMetric`, plus a hand-rolled
   citation-grounding and refusal-accuracy checker
-- **UI:** Streamlit
+- **UI:** Streamlit, kept awake on Community Cloud by a scheduled GitHub
+  Action (`.github/workflows/keep-awake.yml`)
 
 ## Disclaimer
 

@@ -29,16 +29,19 @@ from deepeval.metrics import FaithfulnessMetric
 from deepeval.models import AnthropicModel
 from deepeval.test_case import LLMTestCase
 
-from generate import REFUSAL, generate_answer
+import os
+
+from generate import REFUSAL, generate_answer, local_anthropic_key
 from retrieve import Retriever
 
 retriever = Retriever()
 judge_model = AnthropicModel(model="claude-haiku-4-5")
+API_KEY = local_anthropic_key() or os.environ.get("ANTHROPIC_API_KEY")
 
 
 def sakan_answer(question: str, k: int = 6) -> tuple[str, list[str]]:
     chunks = retriever.hybrid_search(question, k=k)
-    answer = generate_answer(question, chunks)
+    answer = generate_answer(question, chunks, API_KEY)
     retrieval_context = [c["text"] for c in chunks]
     return answer, retrieval_context
 

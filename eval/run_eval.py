@@ -25,6 +25,7 @@ and prompt-tuning work both need.
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -35,7 +36,7 @@ from deepeval.metrics import FaithfulnessMetric
 from deepeval.models import AnthropicModel
 from deepeval.test_case import LLMTestCase
 
-from generate import REFUSAL, generate_answer
+from generate import REFUSAL, generate_answer, local_anthropic_key
 from retrieve import Retriever
 
 QUESTIONS_PATH = Path(__file__).parent / "questions.json"
@@ -69,6 +70,7 @@ def is_exact_refusal(answer: str) -> bool:
 
 def run():
     retriever = Retriever()
+    api_key = local_anthropic_key() or os.environ.get("ANTHROPIC_API_KEY")
     judge_model = AnthropicModel(model="claude-haiku-4-5")
     faithfulness_metric = FaithfulnessMetric(threshold=0.8, model=judge_model, include_reason=True)
 
@@ -77,7 +79,7 @@ def run():
 
     for q in questions:
         chunks = retriever.hybrid_search(q["question"], k=6)
-        answer = generate_answer(q["question"], chunks)
+        answer = generate_answer(q["question"], chunks, api_key)
 
         given_keys = {(c["law"], c["article_no"]) for c in chunks if c["law"]}
         cited = extract_citations(answer)
